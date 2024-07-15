@@ -1,0 +1,40 @@
+  <plugin>
+    org.contikios.cooja.plugins.ScriptRunner
+    <plugin_config>
+      <script>
+TIMEOUT(2000000);
+log.log("Starting logger");
+
+var sendTime = 0;
+var receiveTime = 0;
+
+while (true) {
+  if (msg) {
+    // Check if the message is a sent message
+    if (msg.contains("Sent")) {
+      sendTime = time;
+    }
+    // Check if the message is a received message
+    if (msg.contains("Received")) {
+      receiveTime = time;
+      var elapsedTime = receiveTime - sendTime;
+      log.log("Message Round Trip Time: " + elapsedTime + " ms\n");
+    }
+    
+    log.log(time + " " + id + " " + msg + "\n");
+  }
+
+  YIELD();
+}  
+// WAIT_UNTIL(id == 1 &amp;&amp; msg.contains("Received"));
+// WAIT_UNTIL(id == 2 &amp;&amp; msg.contains("Received"));
+// WAIT_UNTIL(id == 3 &amp;&amp; msg.contains("Received"));
+// WAIT_UNTIL(id == 4 &amp;&amp; msg.contains("Received"));
+
+// log.testOK();
+      </script>
+      <active>true</active>
+    </plugin_config>
+  </plugin>
+
+
