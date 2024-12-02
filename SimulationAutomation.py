@@ -1,74 +1,48 @@
 import subprocess
 import os
-import re
-
-
-def update_csc_transmitting_range(csc_file_path, transmitting_range):
-    with open(csc_file_path, 'r') as csc_file:
-        csc_content = csc_file.read()
-
-
-    # Update the transmitting_range in the csc_content
-    updated_csc_content = re.sub(r'<transmitting_range>\d+\.\d+</transmitting_range>', f'<transmitting_range>{transmitting_range}</transmitting_range>', csc_content)
-
-
-    with open(csc_file_path, 'w') as csc_file:
-        csc_file.write(updated_csc_content)
-
+import shutil
 
 script_directory = os.path.dirname(os.path.abspath(__file__))
 contiki_ng_directory = os.path.abspath(os.path.join(script_directory, "..", ".."))
 
-
 cooja_directory = os.path.join(contiki_ng_directory, "tools", "cooja")
-csc_file_path = os.path.join(cooja_directory, "Example1.csc")
+csc_file_path = os.path.join(cooja_directory, "tsch_10m.csc")
 testlog_path = os.path.join(cooja_directory, "COOJA.testlog")
-output_folder = os.path.join(cooja_directory, "filtered_logs")
+
+os.chdir(cooja_directory)
 
 
+try:
+    subprocess.run(["./gradlew", "run", f"--args='--no-gui {csc_file_path}'"], check=True, shell=True)
+except subprocess.CalledProcessError as e:
+    print(f"Error: {e}")
+
+# Reading the content of the test log file
+try:
+
+    with open(testlog_path, 'r') as testlog_file:
+        testlog_content = testlog_file.read()
+except FileNotFoundError:
+    print("Test log file not found.")
+    exit(1)
+
+# Constructing the destination directory path
+destination_directory = "/home/vagrant/contiki-ng/tools/cooja/LogFiles/"
 
 
-# Create the output folder if it doesn't exist
-os.makedirs(output_folder, exist_ok=True)
-
-
-# Define the range of transmitting values
-transmitting_range_values = [25, 50, 75, 100, 125, 150]
-
-
-
-
-for transmitting_range in transmitting_range_values:
-    # Update the csc file with the current transmitting range
-    update_csc_transmitting_range(csc_file_path, transmitting_range)
-
-
-
-
-    # Run the simulation
+# Checking if the destination directory exists
+if os.path.exists(destination_directory):
+    # Constructing the new filename
+    csc_filename_without_extension = os.path.splitext(os.path.basename(csc_file_path))[0]
+    new_filename = f"{csc_filename_without_extension}.testlog"
+    new_filepath = os.path.join(destination_directory, new_filename)
+    
+    # Writing the content to the new test log file
     try:
-        subprocess.run(["./gradlew", "run", f"--args='--no-gui {csc_file_path}'"], check=True, shell=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error: {e}")
-
-
-    # Read the entire testlog file
-    with open(testlog_path, 'r') as log_file:
-        lines = log_file.readlines()
-
-
-    # Define a regular expression pattern for matching the desired lines
-    pattern = re.compile(r'^\d+\s+\d+\s+CPU\s+\d+s\s+LPM\s+\d+s\s+DEEP LPM\s+\d+s\s+Total time \d+s$')
-
-
-    # Filter lines that match the pattern
-    filtered_lines = [line.strip() for line in lines if pattern.match(line)]
-
-
-    # Save filtered lines to a new file with the name of the transmitting range value
-    output_file_name = os.path.join(output_folder, f"{transmitting_range}.txt")
-    with open(output_file_name, 'w') as output_file:
-        output_file.write('\n'.join(filtered_lines))
-
-
-    print(f"Filtered log file for transmitting range {transmitting_range} saved to: {output_file_name}")
+        with open(new_filepath, 'w') as new_testlog_file:
+            new_testlog_file.write(testlog_content)
+        print(f"Test log file copied to {new_filepath}")
+    except IOError as e:
+        print(f"Error writing to the new test log file: {e}")
+else:
+    print("Destination folder not found. Unable to copy.")
